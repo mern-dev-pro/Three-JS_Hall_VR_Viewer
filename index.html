@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <script src="assets/js/three.min.js"></script>
+    <script src="assets/js/inflate.min.js"></script>
+    <script src="assets/js/FBXLoader.js"></script>
+    <script src="assets/js/OBJloader.js"></script>
+    <script src="assets/js/OrbitControls.js"></script>
+    <title>PSG</title>
+    <link rel="stylesheet" href="assets/css/custom.css"/>
+</head>
+
+<body>
+    <div id="container">
+      <section id="loading-screen">
+        <div id="loader"></div>
+      </section>
+    </div>
+    <script type="text/javascript">
+        //================================== Init =================================================================//
+        var mixers = [];
+        var clock = new THREE.Clock();
+        const scene = new THREE.Scene();
+        const renderer = new THREE.WebGLRenderer();
+        scene.background = new THREE.Color( 0x000000 );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.getElementById('container').appendChild( renderer.domElement )
+        
+        //================================== Load FBX file =================================================================//
+        function onTransitionEnd( event ) {
+          event.target.remove();  
+        }
+        const loadingManager = new THREE.LoadingManager( () => {
+          const loadingScreen = document.getElementById( 'loading-screen' );
+          loadingScreen.classList.add( 'fade-out' );
+          loadingScreen.addEventListener( 'transitionend', onTransitionEnd );
+        } );
+        var loader = new THREE.FBXLoader(loadingManager);
+        loader.load( 'assets/fbx/test_build.fbx', function ( object ) {
+                //object.mixer = new THREE.AnimationMixer( object );
+                //mixers.push( object.mixer );
+
+                //var action = object.mixer.clipAction( object.animations[ 0 ] );
+                //action.play();
+
+                scene.add( object);
+            }, undefined, function ( error ) {
+                console.error( error );
+            } 
+        );
+
+        //================================== Add Light =================================================================//
+        var ambientLight = new THREE.AmbientLight( 0xffffff, 0.4 );
+        scene.add( ambientLight );
+        var pointLight = new THREE.PointLight( 0xffffff, 0.7 );
+        scene.add( pointLight );
+        pointLight.position.set(0,2000,5000);
+        
+        //==================================Set Light =================================================================//
+        const camera = new THREE.PerspectiveCamera( 400, 500/250, 1, 28000 );      
+        const controls = new THREE.OrbitControls( camera, renderer.domElement );
+        controls.minAzimuthAngle = - Math.PI*0.1;
+        controls.maxAzimuthAngle = Math.PI*0.1; 
+        controls.minPolarAngle = Math.PI * 0.3;
+        controls.maxPolarAngle = Math.PI * 0.5;  
+        camera.position.set( -194, 2, 6300);
+        scene.add( camera );
+
+        //================================== Resize =================================================================//
+        function resizeRendererToDisplaySize(renderer) {
+            const canvas = renderer.domElement;
+            let width = window.innerWidth;
+            let height = window.innerHeight;
+            let canvasPixelWidth = canvas.width / window.devicePixelRatio;
+            let canvasPixelHeight = canvas.height / window.devicePixelRatio;
+        
+            const needResize =
+            canvasPixelWidth !== width || canvasPixelHeight !== height;
+            if (needResize) {
+              renderer.setSize(width, height, false);
+            }
+            return needResize;
+        }
+
+        //================================== Goto Actions =================================================================//
+        var raycaster = new THREE.Raycaster();
+        function raycast(e, touch = false) {
+            var mouse = {};
+            if (touch) {
+              mouse.x = 2 * (e.changedTouches[0].clientX / window.innerWidth) - 1;
+              mouse.y = 1 - 2 * (e.changedTouches[0].clientY / window.innerHeight);
+            } else {
+              mouse.x = 2 * (e.clientX / window.innerWidth) - 1;
+              mouse.y = 1 - 2 * (e.clientY / window.innerHeight);
+            }
+            // update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+        
+            // calculate objects intersecting the picking ray
+            var intersects = raycaster.intersectObjects(scene.children, true);
+        
+            if (intersects[0]) {
+              var object = intersects[0].object;
+              var base_url = window.location.origin;  
+              if (object.name === 'ChamferBox001') {
+                console.log('Object Selected');
+                window.location.href=base_url+"/booths";
+              }
+            }
+        }
+        window.addEventListener('click', e => raycast(e));
+        window.addEventListener('touchend', e => raycast(e, true));
+
+        //================================== Update Screen =================================================================//
+        function update() {
+            if ( mixers.length > 0 ) {
+                for ( var i = 0; i < mixers.length; i ++ ) {
+                  mixers[ i ].update( clock.getDelta() );
+                }
+            }
+        
+            if (resizeRendererToDisplaySize(renderer)) {
+              const canvas = renderer.domElement;
+              camera.aspect = canvas.clientWidth / canvas.clientHeight;
+              camera.updateProjectionMatrix();
+            }
+        
+            renderer.render(scene, camera);
+            requestAnimationFrame(update);
+        }
+        
+        update();
+
+    </script>
+</body>
+
+</html>
